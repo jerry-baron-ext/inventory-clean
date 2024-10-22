@@ -1,12 +1,24 @@
+// logger/logger.service.ts
 import { Injectable } from '@nestjs/common';
+import { CloudWatchService } from '../aws/cloudwatch.service';
 
 @Injectable()
 export class LoggerService {
-  log(message: string) {
+  constructor(private readonly cloudWatchService: CloudWatchService) {}
+
+  async log(message: string) {
     console.log(`[INFO] ${new Date().toISOString()} - ${message}`);
+    await this.cloudWatchService.log(message, 'INFO');
   }
 
-  error(message: string) {
-    console.error(`[ERROR] ${new Date().toISOString()} - ${message}`);
+  async error(message: string, error?: Error) {
+    const errorMessage = error ? `${message}: ${error.message}` : message;
+    console.error(`[ERROR] ${new Date().toISOString()} - ${errorMessage}`);
+    await this.cloudWatchService.log(errorMessage, 'ERROR');
+    
+    if (error && error.stack) {
+      console.error(error.stack);
+      await this.cloudWatchService.log(`Stack trace: ${error.stack}`, 'ERROR');
+    }
   }
 }
